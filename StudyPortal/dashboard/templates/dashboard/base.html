@@ -70,7 +70,13 @@
   </header>
   <br /><br />
   <main>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert text-{{message.tags}}">{{message}}</div>
+    {% endfor %}
+    {% endif %}
 
+    
     {% block content %}
     {% endblock content %}
 
