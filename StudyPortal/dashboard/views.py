@@ -6,12 +6,13 @@ from django.views import generic
 from youtubesearchpython import VideosSearch
 import requests
 import wikipedia
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
 def home(request):
     return render(request, 'dashboard/home.html')
-
+@login_required(login_url = 'login')
 def notes(request):
     if request.method == 'POST':
         form = NotesForm(request.POST)
@@ -35,7 +36,7 @@ def notes_delete(request, pk = None):
 class NotesDetailView(generic.DetailView):
     model = Notes
     
-    
+@login_required(login_url = 'login')    
 def homework(request):
     if request.method == 'POST':
         form = HomeworkForm(request.POST) 
@@ -122,7 +123,7 @@ def youtube(request):
     context = {'form' : form}
     return render(request, 'dashboard/youtube.html', context)
 
-
+@login_required
 def todo(request):
     todo = Todo.objects.filter(user = request.user)
     if request.method == "POST":
@@ -262,3 +263,105 @@ def wiki(request):
         'form' : form,
     }
     return render(request, 'dashboard/wiki.html', context)
+
+
+def conversion(request):
+    if request.method == 'POST':
+        form = ConversionForm(request.POST)
+        if request.POST.get('measurement') == 'length':
+            measurment_form = LenghtConversionForm()
+            context ={
+                'form' : form,
+                'm_form': measurment_form,
+                'input' : True,
+            }
+            
+            if 'input' in request.POST:
+                first = request.POST['measure1']
+                second = request.POST['measure2']
+                input_value = request.POST['input']
+                answer = ''
+                
+                if input_value and int(input_value) >= 0:
+                    if first == 'yard' and second == 'foot':
+                        answer = f'{input_value} yard = {int(input_value)*3} foot'
+                    if first == 'foot' and second == 'yard':
+                        answer = f'{input_value} foot = {int(input_value)/3} yard'
+                context = {
+                    'form': form,
+                    'm_form': measurment_form,
+                    'input': True,
+                    'answer': answer
+                }
+            return render(request, 'dashboard/conversion.html', context)
+        if request.POST.get('measurement') == 'mass':
+            measurment_form = MassConversionForm(request.POST)
+            if 'input' in request.POST:
+                first = request.POST['measure1']
+                second = request.POST['measure2']
+                input_value = request.POST['input']
+                answer = ''
+                if input_value and int(input_value) >= 0:
+                    if first == 'pound' and second == 'kilogram':
+                        answer = f'{input_value} pound = {int(input_value) * 0.453592} kilogram'
+                    if first == 'kilogram' and second == 'pound':
+                        answer = f'{input_value} kilogram = {int(input_value) * 2.20462} pound'
+                context = {
+                    'form': form,
+                    'm_form': measurment_form,
+                    'input': True,
+                    'answer': answer
+                }
+                
+                return render(request, 'dashboard/conversion.html', context)
+
+    else:
+        form = ConversionForm()
+
+    context = {
+        'form': form,
+        'input': False,
+    }
+    return render(request, 'dashboard/conversion.html', context)
+
+
+def register(request):
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account is created for {username} !!')
+            return redirect('login')
+
+    else:       
+        form = UserRegistrationForm()
+    contex = {
+        'form' : form
+    }
+    return render(request, 'dashboard/register.html', contex)
+
+@login_required(login_url = 'login')
+def profile(request):
+    homework = Homework.objects.filter(is_finished = False, user = request.user)
+    todo = Todo.objects.filter(is_finished = False, user = request.user)
+    print(len(homework), len(todo))
+    if len(homework) == 0:
+        homework_done = True
+    else:
+        homework_done = False
+    if len(todo) == 0 :
+        todo_done = True
+    else:
+        todo_done = False
+        
+    context = {
+        'homeworks' : homework,
+        'todos' : todo,
+        'homework_done' : homework_done,
+        'todo_done' : todo_done,
+    }
+    for i in list(homework):
+        print(i.id)
+    print(homework_done, todo_done)
+    return render(request, 'dashboard/profile.html', context)
